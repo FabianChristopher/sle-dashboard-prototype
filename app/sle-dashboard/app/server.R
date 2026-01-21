@@ -150,8 +150,37 @@ as_checkbox_row <- function(label, value_text, checked) {
 server <- function(input, output, session) {
   con <- get_db()
   session$onSessionEnded(function() {
-    DBI::dbDisconnect(con)
+    if (!is.null(con)) {
+      try(DBI::dbDisconnect(con), silent = TRUE)
+    }
   })
+
+  if (is.null(con)) {
+    db_down <- function() {
+      tags$div(
+        class = "sle-muted",
+        "Database connection failed. Check DATABASE_URL and redeploy."
+      )
+    }
+
+    output$patient_header <- renderUI(tags$div(class = "sle-muted", "Database unavailable"))
+    output$domains_summary <- renderUI(db_down())
+    output$key_labs_table <- renderUI(db_down())
+    output$steroid_info <- renderUI(db_down())
+    output$most_recent_visit <- renderUI(db_down())
+    output$active_domains_current <- renderUI(db_down())
+    output$domains_historical <- renderUI(db_down())
+    output$biopsy_info <- renderUI(db_down())
+    output$biopsy_findings <- renderUI(db_down())
+    output$biopsy_prognosis <- renderUI(db_down())
+    output$biopsy_notes <- renderUI(db_down())
+    output$meds_current_sle <- renderUI(db_down())
+    output$meds_current_bp <- renderUI(db_down())
+    output$meds_prior <- renderUI(db_down())
+    output$meds_current_cardio <- renderUI(db_down())
+
+    return(invisible(NULL))
+  }
 
   domain_name_map <- c(
     "Arthritis" = "Joint",
