@@ -21,6 +21,12 @@ parse_db_url <- function(url) {
   host_port <- strsplit(host_port_db, "/")[[1]]
   host_and_port <- strsplit(host_port[1], ":")[[1]]
 
+  host <- host_and_port[1]
+  port <- 5432L
+  if (length(host_and_port) >= 2 && nchar(host_and_port[2]) > 0) {
+    port <- as.integer(host_and_port[2])
+  }
+
   sslmode <- NULL
   if (nchar(query) > 0) {
     kvs <- strsplit(query, "&", fixed = TRUE)[[1]]
@@ -35,8 +41,8 @@ parse_db_url <- function(url) {
   list(
     user = user_pass[1],
     password = user_pass[2],
-    host = host_and_port[1],
-    port = as.integer(host_and_port[2]),
+    host = host,
+    port = port,
     dbname = host_port[2],
     sslmode = sslmode
   )
