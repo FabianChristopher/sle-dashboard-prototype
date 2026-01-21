@@ -405,10 +405,13 @@ for (ext_id in names(domain_data)) {
 }
 
 cat("\n=== Seeding complete! ===\n")
-cat("Patients:", DBI::dbGetQuery(con, "SELECT COUNT(*) FROM patients")[[1]], "\n")
-cat("Visits:", DBI::dbGetQuery(con, "SELECT COUNT(*) FROM visits")[[1]], "\n")
-cat("Labs:", DBI::dbGetQuery(con, "SELECT COUNT(*) FROM labs")[[1]], "\n")
-cat("Domains:", DBI::dbGetQuery(con, "SELECT COUNT(*) FROM domains")[[1]], "\n")
+count_tbl <- function(tbl) {
+  as.character(DBI::dbGetQuery(con, paste0("SELECT COUNT(*) AS n FROM ", tbl))$n[1])
+}
+cat("Patients:", count_tbl("patients"), "\n")
+cat("Visits:", count_tbl("visits"), "\n")
+cat("Labs:", count_tbl("labs"), "\n")
+cat("Domains:", count_tbl("domains"), "\n")
 
 DBI::dbDisconnect(con)
 cat("Done!\n")
