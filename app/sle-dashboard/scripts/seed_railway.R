@@ -11,16 +11,40 @@ suppressPackageStartupMessages({
 db_url <- Sys.getenv("DATABASE_URL")
 
 parse_db_url <- function(url) {
-  # Parse postgresql://user:pass@host:port/dbname
-  pattern <- "postgres(?:ql)?://([^:]+):([^@]+)@([^:]+):([0-9]+)/(.+)"
-  matches <- regmatches(url, regexec(pattern, url))[[1]]
-  if (length(matches) < 6) stop("Invalid DATABASE_URL format")
+  # Parse postgresql://user:pass@host:port/dbname[?sslmode=...]
+  url <- sub("^postgres(ql)?://", "", url)
+
+  query <- ""
+  if (grepl("\\?", url, fixed = TRUE)) {
+    parts_q <- strsplit(url, "\\?", fixed = FALSE)[[1]]
+    url <- parts_q[1]
+    query <- parts_q[2]
+  }
+
+  parts <- strsplit(url, "@")[[1]]
+  user_pass <- strsplit(parts[1], ":")[[1]]
+  host_port_db <- parts[2]
+  host_port <- strsplit(host_port_db, "/")[[1]]
+  host_and_port <- strsplit(host_port[1], ":")[[1]]
+
+  sslmode <- NULL
+  if (nchar(query) > 0) {
+    kvs <- strsplit(query, "&", fixed = TRUE)[[1]]
+    for (kv in kvs) {
+      pair <- strsplit(kv, "=", fixed = TRUE)[[1]]
+      if (length(pair) == 2 && pair[1] == "sslmode") {
+        sslmode <- pair[2]
+      }
+    }
+  }
+
   list(
-    user = matches[2],
-    password = matches[3],
-    host = matches[4],
-    port = as.integer(matches[5]),
-    dbname = matches[6]
+    user = user_pass[1],
+    password = user_pass[2],
+    host = host_and_port[1],
+    port = as.integer(host_and_port[2]),
+    dbname = host_port[2],
+    sslmode = sslmode
   )
 }
 
@@ -36,14 +60,18 @@ if (nchar(db_url) == 0) {
   )
 } else {
   db_params <- parse_db_url(db_url)
-  con <- DBI::dbConnect(
-    RPostgres::Postgres(),
+  args <- list(
+    drv = RPostgres::Postgres(),
     host = db_params$host,
     port = db_params$port,
     dbname = db_params$dbname,
     user = db_params$user,
     password = db_params$password
   )
+  if (!is.null(db_params$sslmode) && nchar(db_params$sslmode) > 0) {
+    args$sslmode <- db_params$sslmode
+  }
+  con <- do.call(DBI::dbConnect, args)
 }
 
 cat("Connected to database!\n")
