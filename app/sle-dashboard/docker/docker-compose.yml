@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: sle_postgres
+    environment:
+      POSTGRES_DB: sle
+      POSTGRES_USER: sle_user
+      POSTGRES_PASSWORD: sle_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - sle_pgdata:/var/lib/postgresql/data
+      - ../db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+  adminer:
+    image: adminer
+    container_name: sle_adminer
+    ports:
+      - "8080:8080"
+
+volumes:
+  sle_pgdata:

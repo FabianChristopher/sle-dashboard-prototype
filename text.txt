@@ -1,0 +1,107 @@
+Hi Fabian! Great chatting last week - I thought about it more over the weekend and regardless of if we reach out to senior mentors or not, I have a volunteer thing you could help me with remotely from your Boston home if you are interested.
+
+
+With your computational background, have you coded a Shiny App before? 
+
+In rheumatology, especially for patients with systemic lupus erythamatosus (SLE) we don’t have an easy to use dashboard that we can reference in epic. If this is of interest,  I could
+
+1) build for you example Data for 2-3 patients with SLE
+2) draw out for you what an initial example dashboard could look like for rheumatologists caring for patients with SLE
+
+3) then you would code an initial example dashboard as a shiny app. We would then iteratively discuss with my colleagues then change the app until it is something would be useful for rheumatologists then,
+
+4) I would try and pitch to NYu to actually deploy it with real pt data in our clinics.
+
+
+How does that project sound to you? 
+
+Fully remote while you are in Boston - and you’d essentially be my partner for this project to be the person who codes the dashboard + we could potentially include this example dashboard in a future manuscript too. 
+
+
+Happy to discuss further next week on a call, if you are interested.
+
+Hi Fabian great! Ok amazing - glad our interests overlap and you have the skills to help me with what I don’t have time to focus on now alone —- 
+If you are down for a volunteer gig like this + then we can hopefully work together long term too as we develop this further to a funded project (maybe new company too?):
+
+Please see below details/not necessarily fully organized but to brainstorm ideas together - 
+
+Short term:
+- Let’s talk more later this week, phone call Thursday evening?
+       but -
+
+Can I send you example data sheet for one patient and you could code a shiny app that looks similar to this?
+3 tabs, with distinct features on each.
+
+See attached images for a general template idea.
+
+
+
+
+
+Below here is more stream of consciousness - 
+Long term:
+- I’ve been in touch with AZN and My chair had been in touch with GSK, and both are interested in a dashboard like this for epic + to help rheumatologists organize the utility of meds. We could use this example to then ask for funding to build this out further (for NYU Langone epic, then maybe ?found a company? To then sell it to Epic, manage the product, and help other institutions/private rheum groups adopt the use of this dashboard for their practice). Then, we need to make one for Rheumatoid arthritis, systemic sclerosis etc.
+- I’m in touch w our NYU clinical implementation team so feasible to build for NYU first forsure + use our HIPAA compliant LLM to review physician notes to build this dashboard.
+
+
+Looking forward to your thoughts!
+
+Call me Abhi brother! Great! Let’s plan like end of day Thursday 430pm or later  
+
+I’ll try and send you an example dataset before for your initial Shiny App. I think it’ll be iterative like will make one initial example, then review w other rheumatologists, then make more changes etc. until people like it for us to try and pitch to deploy
+
+Excited to work together too! I didn’t get to make that sample document yet … we will have 2 pts if you don’t mind for the shiny app
+
+1. Intro pg when you can click and then open the dashboard then within the click
+
+2. Then the dashboard we build together will be fun and then clinically applicable
+
+Renal pathologist at our institution said she’d be able to help us have a tab for Bx summary and outcomes e.g. if a pt has renal bc we can have another tab for that. Then one for clinical treatment and prognostic considerations 
+
+
+There’s an undergrad who has worked w me for summer and now fall too. She’s been thru the volunteer process twice now - can I put you two in touch then you speak on the phone? 
+
+She can orient you to volunteer process etc - Her name is Sophia Josh met her once bc they overlapped very briefly 
+
+Yea wanna make it so it’s easiest to implement into our epic for real pt workflow 
+
+So like a landing page is importnst bc that’s how we get to it in a chart … like open that pt it’s there in the right corner or something
+
+Yea! I’ll start a group chat 
+
+Yay wonderful! Glad you are excited to move forward
+
+- I think it will be a very fruitful partnership!
+
+Plan is
+1. Sophia will send some reading links to you from a foundation website for more lupus related background
+
+2. Her and I will finalize 2 example patient data numbers for you to make an initial, simplified, shiny plot like the pics I sent 
+
+(Only a few labs,
+and a section on organs involved Y or N)  
+
+Then 3,
+With this one initial example link to a plot. I can send to Belmont and then we can get feedback from him + I can start paperwork w him at the Senior/faculty mentor for you to get a formal volunteer position. The formal position will then include like patient data access under an IRB him and I have so you’ll have to do training w pt data safety etc 
+
+Sounds ok?
+
+Good Afternoon Abhi and Fabian,
+
+Attached is the mock patient data that I put together for the pilot. There are three patients, PT 1-3, that have varying disease severity as reflected by their labs and organ system involvement. Fabian, please let me know if you'd like me to clarify anything for your pilot. We're looking forward to seeing your work.
+
+Best,
+
+Sophia
+
+Thank you Sophia! Looking forward to the initial Shiny app prototype Fabian! 
+
+- You can keep it simple for the first one similar to pictures sent with the 3 examples Sophia sent, then, we can sent it to Dr. Belmont for his feedback.
+With him seeing that you can make one shiny plot example, then I can write up your Volunteer paper work with him as the PI/senior person, so we can continue our iterative process to build something we can then deploy. I meet with our Chair this Friday, so we'll see how long my future faculty promotion process takes ... I think we shouldn't wait and get working all together with Belmont as PI.
+
+Looking forward to meeting soon! - Are you able to send me what you have re one example data line as a shiny plot? 
+
+Instead if meeting tomorrow, 
+- Can you send me an example figure and then we meet Thursday/Friday? 
+
+I want to show something to Belmont from you so we can get rolling w your volunteer status application

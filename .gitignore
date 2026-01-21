@@ -1,0 +1,17 @@
+# R
+.Rhistory
+.RData
+.Ruserdata
+
+# Environment files (keep local secrets out of Git)
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# Docker
+**/*pgdata*
+
+# Editor
+.vscode/

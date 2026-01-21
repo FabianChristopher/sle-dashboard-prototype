@@ -1,0 +1,176 @@
+Handoff / Conversation Summary (SLE Dashboard Prototype)
+Date: 2026-01-20
+Repo: Prototype (R Shiny + Postgres)
+App root: app/sle-dashboard/
+
+============================================================
+0) Purpose of this handoff
+============================================================
+This file is a “new chat bootstrap” summary of:
+- What the project is and how it’s structured
+- What work has been completed (key decisions + code changes)
+- How to run the DB + load Excel → DB + run the Shiny app
+- What is explicitly NOT in the Excel/workbook (so must not be displayed)
+- What to do next in the screenshot-driven review process
+
+IMPORTANT: This is not a verbatim transcript of every chat message; it is a complete technical handoff of decisions, changes, and current state.
+
+============================================================
+1) Project big picture
+============================================================
+- Goal: Shiny dashboard prototype for SLE patients, using a small mock dataset from an Excel workbook.
+- UI: Inspired by Abhi’s (AI-generated) screenshots, but the workbook is the source-of-truth for what data the app is allowed to show.
+- Data flow:
+  Excel workbook → scripts/load_mock_data.R → Postgres tables → Shiny app reads via DBI/RPostgres.
+
+============================================================
+2) Workspace structure (key paths)
+============================================================
+- Planning/notes:
+  - text.txt
+  - chatgpt.txt
+- Excel audit artifacts:
+  - analysis/excel/audit_excel.py
+  - analysis/excel/audit_excel_report.json
+- Shiny app:
+  - app/sle-dashboard/app/app.R
+  - app/sle-dashboard/app/global.R
+  - app/sle-dashboard/app/ui.R
+  - app/sle-dashboard/app/server.R
+  - app/sle-dashboard/app/db.R
+  - app/sle-dashboard/assets/styles.css
+- Database schema:
+  - app/sle-dashboard/db/schema.sql
+- Docker:
+  - app/sle-dashboard/docker/docker-compose.yml
+- Excel loader:
+  - app/sle-dashboard/scripts/load_mock_data.R
+
+============================================================
+3) Excel workbook audit (ground truth)
+============================================================
+Workbook: renal bx pilot-mock patients.xlsx
+Sheets of interest:
+- patient 1, patient 2, patient 3
+Each patient sheet contains 3 timepoints:
+- “3 Months Before Biopsy”
+- “Biopsy”
+- “3 Months After Biopsy”
+Labs present (15):
+- Platelets, WBC, ALC, IgA, ANC units, Anti ds-DNA, ESR, CRP,
+  C3 complement, C4 complement, Urine Protein, Urine Creatinine,
+  UPCR, Albumin, eGFR
+Domains present (8):
+- Arthritis, Renal, Skin, Oral Ulcers, Cardiac, Pulm, Gastrointestinal, Neuro
+
+NOT present in workbook:
+- Patient demographics (name, DOB, sex, diagnosis year)
+- Provider details
+- Steroid history
+- Medication history
+- True calendar visit dates
+
+============================================================
+4) Key product decisions made
+============================================================
+A) “Workbook defines content”
+- The app should not display fabricated demographics/meds/steroids/provider info.
+- UI can still have sections, but must say “not present in workbook” or be hidden.
+
+B) Visits / dates
+- Workbook only provides timepoint labels (Before/Biopsy/After), not real dates.
+- Postgres schema requires visits.visit_date NOT NULL; loader generates internal dates purely to satisfy schema.
+- UI should NOT display those synthetic dates to avoid confusion.
+
+C) Labs display normalization
+- Some cell-count labs may be parsed as large integers (e.g., 6.6*10^3 → 6600).
+- UI normalizes for display to match clinical convention where applicable.
+
+D) Abnormal flags
+- “(L)/(H)” flags are computed in the app (threshold logic) and are not from Excel.
+- This is derived info, not fabricated, but can be removed or labeled if strict purity is desired.
+
+============================================================
+5) Code changes completed (high-impact)
+============================================================
+1) Shiny bootstrap fix
+- Added/used app/sle-dashboard/app/global.R to load .env, source db.R, and register assets.
+- This fixed runtime errors like get_db() not found.
+
+2) UI implementation
+- app/sle-dashboard/app/ui.R implements 3 main tabs:
+  - Overview & Trends
+  - Active Disease & PE
+  - Medications
+- assets/styles.css provides a professional dark theme.
+
+3) Removed fabricated patient demographics
+- app/sle-dashboard/scripts/load_mock_data.R no longer seeds fake names/sex/dx dates.
+- Patients are now inserted with external_id only (PT1–PT3).
+
+4) Overview table: timepoint headers (no synthetic dates)
+- app/sle-dashboard/app/server.R uses timepoint labels for columns
+  (3M After / Biopsy / 3M Before), and removes date text from cell values.
+
+5) Steroid + Notes text accuracy
+- Steroid card explicitly says steroid data isn’t in workbook.
+- Notes explicitly say medication/steroid/provider details aren’t in workbook.
+
+6) Fixed timepoint header bug
+- A bug caused “Biopsy” to appear twice in the header.
+- Fixed by tightening timepoint_short_label() matching order.
+
+============================================================
+6) How to run locally
+============================================================
+From app/sle-dashboard/:
+
+1) Start DB (docker compose)
+- Use instructions in app/sle-dashboard/README.md (docker compose will start Postgres + Adminer)
+
+2) Load Excel mock data into Postgres
+- Rscript scripts/load_mock_data.R
+Expected counts:
+- patients: 3
+- visits: 9
+- labs: 135
+- domains: 72
+- medications: 0
+
+3) Run Shiny
+- R -q -e "shiny::runApp('app', port=3838, host='127.0.0.1')"
+- Then open http://127.0.0.1:3838
+
+============================================================
+7) Current UI review status
+============================================================
+- Overview & Trends reviewed via screenshots.
+- Header correctly shows Patient: PT1 (since workbook lacks name/sex/dx year).
+- Key Labs table now uses timepoint headers and shows labs from DB.
+- Next steps are iterative screenshot-driven polish.
+
+============================================================
+8) What remains to do (recommended next steps)
+============================================================
+A) Screenshot review loop
+- Continue reviewing each tab:
+  1) Overview & Trends (table alignment, units, flags policy)
+  2) Additional Laboratory Parameters modal (labels/order)
+  3) Active Disease & PE tab (verify domain check UI vs workbook)
+  4) Medications tab: decide “hide when empty” vs show “not in workbook” text
+
+B) Data contract checklist (strongly recommended)
+- Create a simple “UI element → DB table/columns → Excel origin” map.
+- Automatically hide any UI panel not backed by data, OR show “not present in workbook” with no placeholders.
+
+C) Next feature per earlier project direction
+- Implement first longitudinal insight (UPCR-focused) then generalize.
+
+============================================================
+9) Known constraints / gotchas
+============================================================
+- visits.visit_date is synthetic due to schema constraints; do not display it as if it’s real.
+- medications table is empty given current workbook.
+- computed (L)/(H) flags are derived in server.R, not in Excel.
+
+End of handoff.

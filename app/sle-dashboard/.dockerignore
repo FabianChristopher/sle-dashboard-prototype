@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+*.md
+README*
+docker/
+scripts/
+*.xlsx
+.DS_Store
+.vscode
+.Rproj.user
+*.Rproj

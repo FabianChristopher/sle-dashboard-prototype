@@ -1,0 +1,195 @@
+{
+  "workbook": "/Users/fab/Library/Mobile Documents/com~apple~CloudDocs/Mac/Projects/Abhi/Prototype/renal bx pilot-mock patients.xlsx",
+  "sheets": [
+    {
+      "name": "sample criteria",
+      "dims": {
+        "rows": 19,
+        "cols": 5
+      },
+      "lab_header_row": 4,
+      "domain_header_row": 4,
+      "timepoints": [
+        "Y/N (active)"
+      ],
+      "labs": {
+        "count": 15,
+        "names": [
+          "Platelets",
+          "WBC",
+          "ALC",
+          "IgA",
+          "ANC",
+          "Anti ds-DNA",
+          "ESR",
+          "CRP",
+          "C3 complement",
+          "C4 complement",
+          "Urine Protein",
+          "Urine Creatinine",
+          "UPCR",
+          "Albumin",
+          "eGFR"
+        ]
+      },
+      "domains": {
+        "count": 8,
+        "names": [
+          "Arthritis",
+          "Renal",
+          "Skin",
+          "Oral Ulcers",
+          "Cardiac",
+          "Pulm",
+          "Gastrointestinal",
+          "Neuro"
+        ]
+      },
+      "preview_top_left": null
+    },
+    {
+      "name": "patient 1",
+      "dims": {
+        "rows": 29,
+        "cols": 10
+      },
+      "lab_header_row": 4,
+      "domain_header_row": 21,
+      "timepoints": [
+        "3 Months Before Biopsy",
+        "Biopsy",
+        "3 Months After Biopsy"
+      ],
+      "labs": {
+        "count": 15,
+        "names": [
+          "Platelets",
+          "WBC",
+          "ALC",
+          "IgA",
+          "ANC units",
+          "Anti ds-DNA",
+          "ESR",
+          "CRP",
+          "C3 complement",
+          "C4 complement",
+          "Urine Protein",
+          "Urine Creatinine",
+          "UPCR",
+          "Albumin",
+          "eGFR"
+        ]
+      },
+      "domains": {
+        "count": 8,
+        "names": [
+          "Arthritis",
+          "Renal",
+          "Skin",
+          "Oral Ulcers",
+          "Cardiac",
+          "Pulm",
+          "Gastrointestinal",
+          "Neuro"
+        ]
+      },
+      "preview_top_left": null
+    },
+    {
+      "name": "patient 2",
+      "dims": {
+        "rows": 31,
+        "cols": 10
+      },
+      "lab_header_row": 6,
+      "domain_header_row": 23,
+      "timepoints": [
+        "3 Months Before Biopsy",
+        "Biopsy",
+        "3 Months After Biopsy"
+      ],
+      "labs": {
+        "count": 15,
+        "names": [
+          "Platelets",
+          "WBC",
+          "ALC",
+          "IgA",
+          "ANC units",
+          "Anti ds-DNA",
+          "ESR",
+          "CRP",
+          "C3 complement",
+          "C4 complement",
+          "Urine Protein",
+          "Urine Creatinine",
+          "UPCR",
+          "Albumin",
+          "eGFR"
+        ]
+      },
+      "domains": {
+        "count": 8,
+        "names": [
+          "Arthritis",
+          "Renal",
+          "Skin",
+          "Oral Ulcers",
+          "Cardiac",
+          "Pulm",
+          "Gastrointestinal",
+          "Neuro"
+        ]
+      },
+      "preview_top_left": null
+    },
+    {
+      "name": "patient 3",
+      "dims": {
+        "rows": 30,
+        "cols": 16
+      },
+      "lab_header_row": 5,
+      "domain_header_row": 22,
+      "timepoints": [
+        "3 Months Before Biopsy",
+        "Biopsy",
+        "3 Months After Biopsy"
+      ],
+      "labs": {
+        "count": 15,
+        "names": [
+          "Platelets",
+          "WBC",
+          "ALC",
+          "IgA",
+          "ANC units",
+          "Anti ds-DNA",
+          "ESR",
+          "CRP",
+          "C3 complement",
+          "C4 complement",
+          "Urine Protein",
+          "Urine Creatinine",
+          "UPCR",
+          "Albumin",
+          "eGFR"
+        ]
+      },
+      "domains": {
+        "count": 8,
+        "names": [
+          "Arthritis",
+          "Renal",
+          "Skin",
+          "Oral Ulcers",
+          "Cardiac",
+          "Pulm",
+          "Gastrointestinal",
+          "Neuro"
+        ]
+      },
+      "preview_top_left": null
+    }
+  ]
+}
