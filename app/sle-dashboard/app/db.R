@@ -54,9 +54,10 @@ parse_db_url <- function(url) {
 
 get_db <- function() {
   tryCatch({
-    # Railway provides DATABASE_URL; fallback to individual env vars for local dev
+    # Railway/Render provide DATABASE_URL; fallback to individual env vars for local dev
     db_url <- Sys.getenv("DATABASE_URL", "")
     
+    message("[DB] DATABASE_URL present: ", nchar(db_url) > 0)
     if (nchar(db_url) > 0) {
       # Parse DATABASE_URL (format: postgres://user:pass@host:port/dbname)
       params <- parse_db_url(db_url)
@@ -77,6 +78,9 @@ get_db <- function() {
     }
     
     # Fallback to individual environment variables (local Docker setup)
+    message("[DB] Fallback to DB_* env vars")
+    message("[DB] DB_HOST=", Sys.getenv("DB_HOST", "localhost"))
+    message("[DB] DB_USER=", Sys.getenv("DB_USER", "postgres"))
     DBI::dbConnect(
       RPostgres::Postgres(),
       host = Sys.getenv("DB_HOST", "localhost"),
@@ -86,7 +90,7 @@ get_db <- function() {
       password = Sys.getenv("DB_PASSWORD", "postgres")
     )
   }, error = function(e) {
-    message("Database connection error: ", e$message)
+    message("[DB ERROR] Database connection error: ", e$message)
     NULL
   })
 }
