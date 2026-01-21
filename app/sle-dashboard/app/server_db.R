@@ -134,6 +134,10 @@ lab_flag <- function(lab_name, value) {
   list(flag = NULL, class = NULL)
 }
 
+sql_placeholders <- function(n, start_index = 1) {
+  paste0("$", seq.int(start_index, length.out = n), collapse = ",")
+}
+
 as_checkbox_row <- function(label, value_text, checked) {
   tags$div(
     class = "sle-kv",
@@ -144,7 +148,39 @@ as_checkbox_row <- function(label, value_text, checked) {
 }
 
 server <- function(input, output, session) {
-  # No database connection needed - using embedded mock data!
+  con <- get_db()
+  session$onSessionEnded(function() {
+    if (!is.null(con)) {
+      try(DBI::dbDisconnect(con), silent = TRUE)
+    }
+  })
+
+  if (is.null(con)) {
+    db_down <- function() {
+      tags$div(
+        class = "sle-muted",
+        "Database connection failed. Check DATABASE_URL and redeploy."
+      )
+    }
+
+    output$patient_header <- renderUI(tags$div(class = "sle-muted", "Database unavailable"))
+    output$domains_summary <- renderUI(db_down())
+    output$key_labs_table <- renderUI(db_down())
+    output$steroid_info <- renderUI(db_down())
+    output$most_recent_visit <- renderUI(db_down())
+    output$active_domains_current <- renderUI(db_down())
+    output$domains_historical <- renderUI(db_down())
+    output$biopsy_info <- renderUI(db_down())
+    output$biopsy_findings <- renderUI(db_down())
+    output$biopsy_prognosis <- renderUI(db_down())
+    output$biopsy_notes <- renderUI(db_down())
+    output$meds_current_sle <- renderUI(db_down())
+    output$meds_current_bp <- renderUI(db_down())
+    output$meds_prior <- renderUI(db_down())
+    output$meds_current_cardio <- renderUI(db_down())
+
+    return(invisible(NULL))
+  }
 
   domain_name_map <- c(
     "Arthritis" = "Joint",
@@ -152,8 +188,16 @@ server <- function(input, output, session) {
   )
   domain_order <- c("Skin", "Joint", "Renal", "Cardiac", "Pulm", "Gastrointestinal", "Neuro", "Oral Ulcers")
 
-  # Get patients from mock data
-  patients <- get_mock_patients()
+  patients <- DBI::dbGetQuery(
+    con,
+    paste(
+      "SELECT",
+      "external_id,",
+      "COALESCE(NULLIF(TRIM(CONCAT_WS(' ', first_name, last_name)), ''), external_id) AS display_name",
+      "FROM patients",
+      "ORDER BY external_id"
+    )
+  )
 
   patient_choices <- setNames(patients$external_id, patients$display_name)
   updateSelectInput(
@@ -165,12 +209,30 @@ server <- function(input, output, session) {
 
   patient_row <- reactive({
     req(input$patient)
-    get_mock_patient_row(input$patient)
+    DBI::dbGetQuery(
+      con,
+      paste(
+        "SELECT external_id, first_name, last_name, sex, diagnosis_date",
+        "FROM patients",
+        "WHERE external_id = $1"
+      ),
+      params = list(input$patient)
+    )
   })
 
   visits_df <- reactive({
     req(input$patient)
-    get_mock_visits(input$patient)
+    DBI::dbGetQuery(
+      con,
+      paste(
+        "SELECT v.visit_id, v.visit_date, v.visit_type",
+        "FROM visits v",
+        "JOIN patients p ON p.patient_id = v.patient_id",
+        "WHERE p.external_id = $1",
+        "ORDER BY v.visit_date DESC"
+      ),
+      params = list(input$patient)
+    )
   })
 
   last_visits <- reactive({
@@ -221,18 +283,58 @@ server <- function(input, output, session) {
     if (nrow(v) == 0) {
       return(data.frame())
     }
+
+    # Fetch labs for the patient's last 3 visits.
     visit_ids <- v$visit_id
-    get_mock_labs(input$patient, visit_ids, key_labs)
+    p1 <- sql_placeholders(length(visit_ids), start_index = 2)
+    p2 <- sql_placeholders(length(key_labs), start_index = 2 + length(visit_ids))
+
+    sql <- paste(
+      "SELECT l.visit_id, l.collected_date, l.lab_name, l.lab_value, l.lab_unit",
+      "FROM labs l",
+      "JOIN patients p ON p.patient_id = l.patient_id",
+      "WHERE p.external_id = $1",
+      paste0("AND l.visit_id IN (", p1, ")"),
+      paste0("AND l.lab_name IN (", p2, ")")
+    )
+
+    params <- c(list(input$patient), as.list(visit_ids), as.list(key_labs))
+    DBI::dbGetQuery(con, sql, params = params)
   })
 
   domains_current_df <- reactive({
     req(input$patient)
-    get_mock_domains_current(input$patient)
+    v <- visits_df()
+    if (nrow(v) == 0) return(data.frame())
+    latest_visit_id <- v$visit_id[1]
+    DBI::dbGetQuery(
+      con,
+      paste(
+        "SELECT d.domain_name, d.active, d.ever_involved",
+        "FROM domains d",
+        "JOIN patients p ON p.patient_id = d.patient_id",
+        "WHERE p.external_id = $1",
+        "AND d.visit_id = $2",
+        "ORDER BY d.domain_name"
+      ),
+      params = list(input$patient, latest_visit_id)
+    )
   })
 
   domains_ever_df <- reactive({
     req(input$patient)
-    get_mock_domains_ever(input$patient)
+    DBI::dbGetQuery(
+      con,
+      paste(
+        "SELECT d.domain_name, BOOL_OR(d.active) AS ever_active, BOOL_OR(d.ever_involved) AS ever_involved",
+        "FROM domains d",
+        "JOIN patients p ON p.patient_id = d.patient_id",
+        "WHERE p.external_id = $1",
+        "GROUP BY d.domain_name",
+        "ORDER BY d.domain_name"
+      ),
+      params = list(input$patient)
+    )
   })
 
   output$patient_header <- renderUI({
@@ -486,7 +588,21 @@ server <- function(input, output, session) {
     # Get key renal labs at biopsy
     renal_labs <- c("UPCR", "Urine Protein", "Urine Creatinine", "eGFR", "Albumin", "C3 complement", "C4 complement")
     
-    labs <- get_mock_labs(input$patient, biopsy_visit$visit_id[1], renal_labs)
+    # Build dynamic placeholders for the IN clause
+    lab_placeholders <- sql_placeholders(length(renal_labs), start_index = 3)
+    
+    labs <- DBI::dbGetQuery(
+      con,
+      paste(
+        "SELECT l.lab_name, l.lab_value, l.lab_unit",
+        "FROM labs l",
+        "JOIN patients p ON p.patient_id = l.patient_id",
+        "WHERE p.external_id = $1",
+        "AND l.visit_id = $2",
+        paste0("AND l.lab_name IN (", lab_placeholders, ")")
+      ),
+      params = c(list(input$patient, biopsy_visit$visit_id[1]), as.list(renal_labs))
+    )
     
     if (nrow(labs) == 0) {
       return(tags$div(class = "sle-muted", "No renal-specific labs at biopsy timepoint."))
@@ -534,33 +650,50 @@ server <- function(input, output, session) {
   output$biopsy_notes <- renderUI({
     tags$div(
       class = "sle-muted",
-      "Pathology notes and recommendations will appear here when biopsy reports are integrated."
+      tags$p("Pathologist notes and detailed biopsy interpretation will be displayed here once integrated with the renal pathology system."),
+      tags$p(style = "margin-top: 10px;", 
+        tags$em("This section is designed for collaboration with the renal pathology team to include ISN/RPS classification, activity index, chronicity index, and treatment recommendations.")
+      )
     )
   })
 
-  # Medications placeholders
   meds_df <- reactive({
-    data.frame()  # Empty for now - no medication data in mock
+    req(input$patient)
+    DBI::dbGetQuery(
+      con,
+      paste(
+        "SELECT m.medication_name, m.category, m.dose, m.route, m.frequency, m.current, m.stop_reason, m.end_date",
+        "FROM medications m",
+        "JOIN patients p ON p.patient_id = m.patient_id",
+        "WHERE p.external_id = $1",
+        "ORDER BY m.current DESC, m.category NULLS LAST, m.medication_name"
+      ),
+      params = list(input$patient)
+    )
   })
 
-  render_med_list <- function(df, empty_msg) {
+  render_med_list <- function(df, empty_text) {
     if (nrow(df) == 0) {
-      return(tags$div(class = "sle-muted", empty_msg))
+      return(tags$div(class = "sle-muted", empty_text))
     }
     tags$ul(
       class = "sle-med-list",
       lapply(seq_len(nrow(df)), function(i) {
-        tags$li(
-          tags$strong(df$medication_name[i]),
-          if (!is.na(df$dose[i])) paste0(" - ", df$dose[i]) else ""
-        )
+        line <- df$medication_name[i]
+        if (!is.na(df$dose[i]) && nchar(df$dose[i]) > 0) line <- paste(line, df$dose[i])
+        if (!is.na(df$frequency[i]) && nchar(df$frequency[i]) > 0) line <- paste(line, df$frequency[i])
+        if (!isTRUE(df$current[i]) && !is.na(df$stop_reason[i]) && nchar(df$stop_reason[i]) > 0) {
+          end_txt <- if (!is.na(df$end_date[i])) format_date_short(df$end_date[i]) else ""
+          line <- paste0(line, " (Stopped", if (nchar(end_txt) > 0) paste0(": ", end_txt) else "", ": ", df$stop_reason[i], ")")
+        }
+        tags$li(line)
       })
     )
   }
 
   output$meds_current_sle <- renderUI({
     df <- meds_df()
-    df <- df[isTRUE(df$current) & (!is.na(df$category) & df$category %in% c("SLE", "sle", "immunosuppressant")), , drop = FALSE]
+    df <- df[isTRUE(df$current) & (is.na(df$category) | df$category %in% c("SLE", "sle")), , drop = FALSE]
     render_med_list(df, "Medication data not present in the workbook.")
   })
 
@@ -584,9 +717,17 @@ server <- function(input, output, session) {
 
   observeEvent(input$open_additional_labs, {
     req(input$patient)
-    all_labs <- get_mock_all_labs(input$patient)
-    lab_names <- unique(all_labs$lab_name)
-    lab_names <- lab_names[order(lab_names)]
+    all_labs <- DBI::dbGetQuery(
+      con,
+      paste(
+        "SELECT DISTINCT l.lab_name",
+        "FROM labs l",
+        "JOIN patients p ON p.patient_id = l.patient_id",
+        "WHERE p.external_id = $1",
+        "ORDER BY l.lab_name"
+      ),
+      params = list(input$patient)
+    )$lab_name
 
     showModal(
       modalDialog(
@@ -598,7 +739,7 @@ server <- function(input, output, session) {
           class = "sle-modal-content",
           tags$div(
             class = "sle-modal-select",
-            selectInput("additional_lab", "Select Lab Parameter", choices = lab_names, selected = if (length(lab_names) > 0) lab_names[1] else NULL, width = "100%")
+            selectInput("additional_lab", "Select Lab Parameter", choices = all_labs, selected = if (length(all_labs) > 0) all_labs[1] else NULL, width = "100%")
           ),
           plotOutput("additional_lab_plot", height = "400px")
         )
@@ -609,17 +750,33 @@ server <- function(input, output, session) {
   output$additional_lab_plot <- renderPlot({
     req(input$patient)
     req(input$additional_lab)
-    
-    all_labs <- get_mock_all_labs(input$patient)
-    df <- all_labs[all_labs$lab_name == input$additional_lab, ]
-    
-    if (nrow(df) == 0) return(NULL)
+    v <- visits_df()
+    if (nrow(v) == 0) return(NULL)
+    df <- DBI::dbGetQuery(
+      con,
+      paste(
+        "SELECT v.visit_id, v.visit_type, l.lab_value",
+        "FROM visits v",
+        "JOIN patients p ON p.patient_id = v.patient_id",
+        "LEFT JOIN labs l ON l.visit_id = v.visit_id AND l.lab_name = $2",
+        "WHERE p.external_id = $1",
+        "ORDER BY v.visit_date"
+      ),
+      params = list(input$patient, input$additional_lab)
+    )
+    y <- as_num(df$lab_value)
 
-    df$rank <- vapply(df$visit_type, timepoint_rank, numeric(1))
+    df$type <- ifelse(!is.na(df$visit_type), as.character(df$visit_type), NA_character_)
+    df$rank <- vapply(df$type, timepoint_rank, numeric(1))
     df <- df[order(df$rank), , drop = FALSE]
 
-    y <- as_num(df$lab_value)
-    lab_unit <- if (nrow(df) > 0) df$lab_unit[1] else NA_character_
+    # Normalize lab values for display (match table convention)
+    lab_unit_row <- DBI::dbGetQuery(
+      con,
+      paste("SELECT lab_unit FROM labs WHERE lab_name = $1 LIMIT 1"),
+      params = list(input$additional_lab)
+    )
+    lab_unit <- if (nrow(lab_unit_row) > 0) lab_unit_row$lab_unit[1] else NA_character_
     
     y_normalized <- sapply(y, function(val) {
       if (is.na(val)) return(NA_real_)
@@ -635,7 +792,7 @@ server <- function(input, output, session) {
     
     plot(
       x,
-      y_normalized,
+      y_normalized[order(df$rank)],
       type = "b",
       pch = 19,
       col = "#4a9eff",
@@ -648,7 +805,7 @@ server <- function(input, output, session) {
       cex.lab = 1.3,
       cex.axis = 1.1
     )
-    axis(1, at = x, labels = vapply(df$visit_type, timepoint_short_label, character(1)), 
+    axis(1, at = x, labels = vapply(df$type, timepoint_short_label, character(1)), 
          col.axis = "#e0e0e0", col = "#606060", cex.axis = 1.1, lwd = 0, lwd.ticks = 1)
     grid(col = "#404040", lwd = 1, lty = 2)
   })
