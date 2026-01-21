@@ -9,8 +9,8 @@ parse_db_url <- function(url) {
 
   # Separate optional query string (e.g. ?sslmode=require)
   query <- ""
-  if (grepl("\\?", url, fixed = TRUE)) {
-    parts_q <- strsplit(url, "\\?", fixed = FALSE)[[1]]
+  if (grepl("?", url, fixed = TRUE)) {
+    parts_q <- strsplit(url, "?", fixed = TRUE)[[1]]
     url <- parts_q[1]
     query <- parts_q[2]
   }
