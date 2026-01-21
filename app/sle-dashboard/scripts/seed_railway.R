@@ -147,7 +147,12 @@ CREATE TABLE IF NOT EXISTS medications (
 "
 
 cat("Creating schema...\n")
-DBI::dbExecute(con, schema_sql)
+schema_statements <- strsplit(schema_sql, ";", fixed = TRUE)[[1]]
+for (stmt in schema_statements) {
+  stmt <- trimws(stmt)
+  if (nchar(stmt) == 0) next
+  DBI::dbExecute(con, stmt)
+}
 
 # Clear existing data
 cat("Clearing existing data...\n")
