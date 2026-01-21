@@ -538,11 +538,6 @@ server <- function(input, output, session) {
     )
   })
 
-  # Medications placeholders
-  meds_df <- reactive({
-    data.frame()  # Empty for now - no medication data in mock
-  })
-
   render_med_list <- function(df, empty_msg) {
     if (nrow(df) == 0) {
       return(tags$div(class = "sle-muted", empty_msg))
@@ -559,27 +554,19 @@ server <- function(input, output, session) {
   }
 
   output$meds_current_sle <- renderUI({
-    df <- meds_df()
-    df <- df[isTRUE(df$current) & (!is.na(df$category) & df$category %in% c("SLE", "sle", "immunosuppressant")), , drop = FALSE]
-    render_med_list(df, "Medication data not present in the workbook.")
+    render_med_list(data.frame(), "Medication data not present in the workbook.")
   })
 
   output$meds_current_bp <- renderUI({
-    df <- meds_df()
-    df <- df[isTRUE(df$current) & (!is.na(df$category) & df$category %in% c("BP", "bp")), , drop = FALSE]
-    render_med_list(df, "Medication data not present in the workbook.")
+    render_med_list(data.frame(), "Medication data not present in the workbook.")
   })
 
   output$meds_current_cardio <- renderUI({
-    df <- meds_df()
-    df <- df[isTRUE(df$current) & (!is.na(df$category) & df$category %in% c("Cardiometabolic", "cardio", "metabolic")), , drop = FALSE]
-    render_med_list(df, "Medication data not present in the workbook.")
+    render_med_list(data.frame(), "Medication data not present in the workbook.")
   })
 
   output$meds_prior <- renderUI({
-    df <- meds_df()
-    df <- df[!isTRUE(df$current), , drop = FALSE]
-    render_med_list(df, "Medication data not present in the workbook.")
+    render_med_list(data.frame(), "Medication data not present in the workbook.")
   })
 
   observeEvent(input$open_additional_labs, {
