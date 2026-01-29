@@ -16,9 +16,7 @@ html, body {
 }
 
 body {
-  background: radial-gradient(1200px 600px at 20% 0%, rgba(44, 123, 229, 0.35), rgba(11, 20, 32, 0)),
-              radial-gradient(900px 500px at 100% 40%, rgba(15, 76, 129, 0.25), rgba(11, 20, 32, 0)),
-              var(--sle-bg);
+  background: linear-gradient(180deg, rgba(15, 30, 50, 0.95), rgba(11, 20, 32, 1));
   color: var(--sle-text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -233,6 +231,7 @@ body {
 
 .tab-content {
   padding-top: 12px;
+  background: transparent;
 }
 
 /* Cards */
@@ -261,6 +260,25 @@ body {
   font-size: 22px;
   font-weight: 800;
   margin-bottom: 8px;
+}
+
+.sle-card__title--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sle-card__title--row .form-group {
+  margin-bottom: 0;
+}
+
+.sle-card__title--row .form-control,
+.sle-card__title--row select {
+  font-size: 14px;
+  font-weight: 400;
+  padding: 6px 10px;
+  height: 34px;
 }
 
 .sle-card__footer {
@@ -309,9 +327,38 @@ body {
 
 .sle-table thead {
   background: rgba(0, 0, 0, 0.4);
+}
+
+.sle-card--scrollable .sle-table thead {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.sle-sticky-table .sle-table thead {
+  position: sticky;
+  top: 0;
+  background: rgba(15, 30, 50, 0.98);
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.sle-card--collapsible {
+  padding: 16px 20px;
+}
+
+.sle-card--collapsible[open] {
+  padding: 20px;
+}
+
+.sle-card--collapsible summary {
+  margin-bottom: 12px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.sle-card--collapsible:not([open]) summary {
+  margin-bottom: 0;
 }
 
 .sle-table th {
@@ -351,7 +398,7 @@ body {
 
 .sle-lab-value.is-low,
 .sle-lab-value.is-high {
-  color: var(--sle-danger);
+  color: var(--sle-muted);
 }
 
 /* Buttons */

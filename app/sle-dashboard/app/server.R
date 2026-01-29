@@ -28,6 +28,10 @@ timepoint_short_label <- function(label) {
 }
 
 as_num <- function(x) {
+  # Handle dsDNA special format: "4+" -> 4, "2+" -> 2, "0" -> 0
+  if (is.character(x) && grepl("\\+$", x)) {
+    x <- sub("\\+$", "", x)
+  }
   suppressWarnings(as.numeric(x))
 }
 
@@ -117,6 +121,137 @@ sparkline_svg <- function(values, stroke = "#7fb4ff") {
   )
 }
 
+# Lab configuration for clinical semantics
+# Each lab has:
+# - ref_low/ref_high: Normal reference range boundaries (NA if one-sided)
+# - direction: Clinical preference when no range defined or both values in/out of range
+#   * lower_better: Lower values indicate improvement (inflammatory markers, proteinuria)
+#   * higher_better: Higher values indicate improvement (kidney function, proteins, immune cells)
+#   * neutral: No inherent clinical direction (used for informational labs)
+# - within_range_policy: Behavior when BOTH values are within normal range
+#   * "directional": Apply direction rule even when both in range (disease markers, organ function)
+#   * "stable": Return "same" when both in range (CBC/hematologic safety labs)
+#   * "neutral": Always return "neutral" regardless of change (informational only)
+
+LAB_CONFIG <- list(
+  # SLE Disease Activity Markers
+  "Anti ds-DNA" = list(
+    ref_low = NA, 
+    ref_high = 10, 
+    direction = "lower_better",
+    within_range_policy = "directional",
+    note = "Elevated anti-dsDNA correlates with SLE disease activity, especially lupus nephritis"
+  ),
+  
+  # Complement Levels (consumed during active disease)
+  "C3 complement" = list(
+    ref_low = 80, 
+    ref_high = 160, 
+    direction = "higher_better",
+    within_range_policy = "directional",
+    note = "Low C3 indicates complement consumption from active disease"
+  ),
+  "C4 complement" = list(
+    ref_low = 12, 
+    ref_high = 40, 
+    direction = "higher_better",
+    within_range_policy = "directional",
+    note = "Low C4 indicates complement consumption from active disease"
+  ),
+  
+  # Renal Function Markers
+  "UPCR" = list(
+    ref_low = NA, 
+    ref_high = 0.5, 
+    direction = "lower_better",
+    within_range_policy = "directional",
+    note = "Urine protein-to-creatinine ratio; elevated indicates proteinuria/renal damage"
+  ),
+  "Urine Protein" = list(
+    ref_low = NA, 
+    ref_high = 150, 
+    direction = "lower_better",
+    within_range_policy = "directional",
+    note = "Elevated urine protein indicates glomerular damage"
+  ),
+  "Urine Creatinine" = list(
+    ref_low = NA, 
+    ref_high = NA, 
+    direction = "neutral",
+    within_range_policy = "neutral",
+    note = "Used as denominator for UPCR calculation; no independent clinical significance"
+  ),
+  "eGFR" = list(
+    ref_low = 60, 
+    ref_high = NA, 
+    direction = "higher_better",
+    within_range_policy = "directional",
+    note = "Estimated glomerular filtration rate; lower values indicate reduced kidney function"
+  ),
+  "Albumin" = list(
+    ref_low = 3.5, 
+    ref_high = 5.5, 
+    direction = "higher_better",
+    within_range_policy = "directional",
+    note = "Serum albumin; low levels can indicate nephrotic syndrome or malnutrition"
+  ),
+  
+  # Inflammatory Markers
+  "ESR" = list(
+    ref_low = NA, 
+    ref_high = 20, 
+    direction = "lower_better",
+    within_range_policy = "directional",
+    note = "Erythrocyte sedimentation rate; elevated indicates inflammation"
+  ),
+  "CRP" = list(
+    ref_low = NA, 
+    ref_high = 1.0, 
+    direction = "lower_better",
+    within_range_policy = "directional",
+    note = "C-reactive protein; elevated indicates acute inflammation"
+  ),
+  
+  # Hematologic Safety Markers (stable policy - within range = OK)
+  "WBC" = list(
+    ref_low = 4.0, 
+    ref_high = 11.0, 
+    direction = "higher_better",
+    within_range_policy = "stable",
+    note = "White blood cell count; low in SLE can indicate leukopenia"
+  ),
+  "ANC units" = list(
+    ref_low = 1.5, 
+    ref_high = NA, 
+    direction = "higher_better",
+    within_range_policy = "stable",
+    note = "Absolute neutrophil count; low values indicate neutropenia and infection risk"
+  ),
+  "ALC" = list(
+    ref_low = 1.0, 
+    ref_high = 4.8, 
+    direction = "higher_better",
+    within_range_policy = "stable",
+    note = "Absolute lymphocyte count; low values indicate lymphopenia common in SLE"
+  ),
+  "Platelets" = list(
+    ref_low = 150, 
+    ref_high = 400, 
+    direction = "higher_better",
+    within_range_policy = "stable",
+    note = "Platelet count; low values can indicate thrombocytopenia in SLE"
+  ),
+  
+  # Immunoglobulin (neutral - informational only)
+  "IgA" = list(
+    ref_low = 70, 
+    ref_high = 400, 
+    direction = "neutral",
+    within_range_policy = "neutral",
+    note = "Immunoglobulin A; can be elevated in some nephropathies but not primary SLE marker"
+  )
+)
+
 lab_flag <- function(lab_name, value) {
   value <- as_num(value)
   if (is.na(value)) {
@@ -132,6 +267,124 @@ lab_flag <- function(lab_name, value) {
   if (lab_name == "CRP" && value > 1.0) return(list(flag = "H", class = "is-high"))
   if (lab_name == "Anti ds-DNA" && value > 10) return(list(flag = "H", class = "is-high"))
   list(flag = NULL, class = NULL)
+}
+
+trend_status <- function(lab_name, v1, v3, epsilon = 0.1) {
+  # Determines trend status by comparing visit 1 (3M BEFORE) to visit 3 (3M AFTER)
+  # Returns: "better", "worse", "same", or "neutral"
+  # 
+  # Clinician-Safe Logic:
+  # 1. Neutral-policy labs (IgA, Urine Creat): always return "neutral"
+  # 2. Check if values are clinically equivalent (within epsilon) -> "same"
+  # 3. Prioritize crossing range boundaries (abnormal<->normal)
+  # 4. For both abnormal: use distance-to-normal
+  # 5. For both in range: respect within_range_policy
+  #    - "stable" policy (WBC, ANC, ALC, Platelets): return "same"
+  #    - "directional" policy (disease/organ markers): apply direction rules
+  
+  if (is.na(v1) || is.na(v3)) return("neutral")
+  
+  # Get lab configuration
+  cfg <- LAB_CONFIG[[lab_name]]
+  if (is.null(cfg)) cfg <- list(ref_low = NA, ref_high = NA, direction = "neutral", within_range_policy = "neutral")
+  
+  ref_low <- cfg$ref_low
+  ref_high <- cfg$ref_high
+  direction <- cfg$direction
+  within_range_policy <- if (is.null(cfg$within_range_policy)) "directional" else cfg$within_range_policy
+  
+  # EARLY EXIT: Neutral-policy labs always return neutral
+  if (within_range_policy == "neutral") return("neutral")
+  
+  # Check if values are clinically equivalent (within epsilon threshold)
+  if (abs(v3 - v1) <= epsilon) return("same")
+  
+  # CASE 1: Double-sided reference range (e.g., C3: 80-160, Albumin: 3.5-5.5, WBC: 4-11)
+  if (!is.na(ref_low) && !is.na(ref_high)) {
+    # Calculate distance from normal range (0 if within range)
+    distance <- function(x) {
+      if (x < ref_low) return(ref_low - x)
+      if (x > ref_high) return(x - ref_high)
+      0
+    }
+    d1 <- distance(v1)
+    d3 <- distance(v3)
+    
+    # Moving from abnormal to normal = BETTER (highest priority)
+    if (d1 > 0 && d3 == 0) return("better")
+    
+    # Moving from normal to abnormal = WORSE (highest priority)
+    if (d1 == 0 && d3 > 0) return("worse")
+    
+    # Both abnormal: closer to normal = better, further = worse
+    if (d1 > 0 && d3 > 0) {
+      if (d3 < d1) return("better")
+      return("worse")
+    }
+    
+    # Both in normal range: apply within_range_policy
+    if (d1 == 0 && d3 == 0) {
+      # Stable policy: within range = clinically stable (grey)
+      if (within_range_policy == "stable") return("same")
+      
+      # Directional policy: assess trend direction even within range
+      if (within_range_policy == "directional") {
+        if (direction == "lower_better") return(if (v3 < v1) "better" else "worse")
+        if (direction == "higher_better") return(if (v3 > v1) "better" else "worse")
+      }
+      
+      return("same")
+    }
+  }
+  
+  # CASE 2: Single-sided reference range (e.g., eGFR >60, UPCR <0.5, ESR <20, ANC >1.5)
+  if (!is.na(ref_low) || !is.na(ref_high)) {
+    in_range1 <- (!is.na(ref_low) && v1 >= ref_low || is.na(ref_low)) && 
+                 (!is.na(ref_high) && v1 <= ref_high || is.na(ref_high))
+    in_range3 <- (!is.na(ref_low) && v3 >= ref_low || is.na(ref_low)) && 
+                 (!is.na(ref_high) && v3 <= ref_high || is.na(ref_high))
+    
+    # Movement into normal range = BETTER
+    if (!in_range1 && in_range3) return("better")
+    
+    # Movement out of normal range = WORSE
+    if (in_range1 && !in_range3) return("worse")
+    
+    # Both in range: apply within_range_policy
+    if (in_range1 && in_range3) {
+      if (within_range_policy == "stable") return("same")
+      
+      if (within_range_policy == "directional") {
+        if (direction == "lower_better") return(if (v3 < v1) "better" else "worse")
+        if (direction == "higher_better") return(if (v3 > v1) "better" else "worse")
+      }
+      
+      return("same")
+    }
+    
+    # Both out of range: use direction rule to assess if moving toward normal
+    if (!in_range1 && !in_range3) {
+      if (direction == "lower_better") return(if (v3 < v1) "better" else "worse")
+      if (direction == "higher_better") return(if (v3 > v1) "better" else "worse")
+    }
+  }
+  
+  # CASE 3: No reference range - use direction-based clinical rules
+  if (direction != "neutral") {
+    if (direction == "lower_better") return(if (v3 < v1) "better" else "worse")
+    if (direction == "higher_better") return(if (v3 > v1) "better" else "worse")
+  }
+  
+  # CASE 4: Neutral direction and no range - cannot determine better/worse
+  "neutral"
+}
+
+trend_color <- function(status) {
+  # Clinician-standard colors per Abhi: blue = better, red = worse, grey = stable/unknown
+  if (status == "better") return("#4a9eff")  # blue
+  if (status == "worse") return("#ff6b6b")   # red
+  if (status == "same") return("#8a8f99")    # grey
+  "#8a8f99"  # neutral = grey
 }
 
 as_checkbox_row <- function(label, value_text, checked) {
@@ -217,12 +470,9 @@ server <- function(input, output, session) {
 
   labs_df <- reactive({
     req(input$patient)
-    v <- last_visits()
-    if (nrow(v) == 0) {
-      return(data.frame())
-    }
-    visit_ids <- v$visit_id
-    get_mock_labs(input$patient, visit_ids, key_labs)
+    all_labs <- get_mock_all_labs(input$patient)
+    if (nrow(all_labs) == 0) return(data.frame())
+    all_labs[all_labs$lab_name %in% key_labs, , drop = FALSE]
   })
 
   domains_current_df <- reactive({
@@ -277,31 +527,75 @@ server <- function(input, output, session) {
 
   output$key_labs_table <- renderUI({
     req(input$patient)
-    v <- last_visits()
-    if (nrow(v) == 0) {
+    v_all <- visits_df()
+    if (nrow(v_all) == 0) {
       return(tags$div(class = "sle-muted", "No visits found."))
     }
 
     labs <- labs_df()
 
-    # Use workbook timepoint labels for ordering and display (avoid synthetic dates).
-    v_sorted <- v
-    v_sorted$type <- ifelse(!is.na(v_sorted$visit_type), as.character(v_sorted$visit_type), NA_character_)
-    v_sorted$rank <- vapply(v_sorted$type, timepoint_rank, numeric(1))
-    v_sorted <- v_sorted[order(v_sorted$rank, decreasing = TRUE), , drop = FALSE]
+    trend_visits <- v_all
+    if (all(is.na(trend_visits$visit_date))) {
+      trend_visits <- trend_visits[order(trend_visits$visit_id, decreasing = TRUE), , drop = FALSE]
+      trend_visits <- trend_visits[seq_len(min(3, nrow(trend_visits))), , drop = FALSE]
+      trend_visits <- trend_visits[order(trend_visits$visit_id), , drop = FALSE]
+    } else {
+      trend_visits <- trend_visits[order(trend_visits$visit_date, decreasing = TRUE), , drop = FALSE]
+      trend_visits <- trend_visits[seq_len(min(3, nrow(trend_visits))), , drop = FALSE]
+      trend_visits <- trend_visits[order(trend_visits$visit_date), , drop = FALSE]
+    }
 
-    visit_cols <- lapply(seq_len(nrow(v_sorted)), function(i) {
+    biopsy_window_types <- c("3 Months Before Biopsy", "Biopsy", "3 Months After Biopsy")
+    only_biopsy_window <- all(trend_visits$visit_type %in% biopsy_window_types)
+
+    trend_cols <- lapply(seq_len(nrow(trend_visits)), function(i) {
+      visit_date <- trend_visits$visit_date[i]
+      hdr <- if (!is.na(visit_date)) format_date_short(visit_date) else paste0("Visit ", i)
       list(
-        visit_id = v_sorted$visit_id[i],
-        type = v_sorted$type[i],
-        hdr = timepoint_short_label(v_sorted$type[i])
+        visit_id = trend_visits$visit_id[i],
+        type = trend_visits$visit_type[i],
+        hdr = hdr
       )
     })
+
+    biopsy_type <- "Biopsy"
+    window_months <- as.integer(input$window_months)
+    
+    # Map biopsy window to timepoint labels - PT4 has Month 0-3, 3-6, 6-9, 9-12, 12-15, 15-18
+    # Biopsy is always Month 6-9 (labeled "Biopsy")
+    # 3M: before=Month 3-6 ("3 Months Before Biopsy"), after=Month 9-12 ("3 Months After Biopsy")
+    # 6M: before=Month 0-3, after=Month 12-15
+    # 12M: before=N/A (no data), after=Month 15-18
+    if (window_months == 3) {
+      window_before <- "3 Months Before Biopsy"
+      window_after <- "3 Months After Biopsy"
+      window_label <- "3M"
+    } else if (window_months == 6) {
+      window_before <- "Month 0-3"
+      window_after <- "Month 12-15"
+      window_label <- "6M"
+    } else if (window_months == 12) {
+      window_before <- NA_character_  # No -6 to -3 data for PT4
+      window_after <- "Month 15-18"
+      window_label <- "1Y"
+    } else {
+      window_before <- NA_character_
+      window_after <- NA_character_
+      window_label <- "18M"
+    }
+
+    find_lab_value <- function(lab_name, visit_type) {
+      if (is.na(visit_type) || nchar(visit_type) == 0) return(NA_real_)
+      r <- labs[labs$lab_name == lab_name & labs$visit_type == visit_type, , drop = FALSE]
+      if (nrow(r) == 0) return(NA_real_)
+      norm <- normalize_lab_for_display(lab_name, r$lab_unit[1], r$lab_value[1])
+      norm$value
+    }
 
     row_ui <- lapply(key_labs, function(lab_name) {
       lab_rows <- labs[labs$lab_name == lab_name, , drop = FALSE]
 
-      values_newest <- vapply(visit_cols, function(vc) {
+      trend_values <- vapply(trend_cols, function(vc) {
         r <- lab_rows[lab_rows$visit_id == vc$visit_id, , drop = FALSE]
         if (nrow(r) == 0) return(NA_real_)
         norm <- normalize_lab_for_display(lab_name, r$lab_unit[1], r$lab_value[1])
@@ -309,7 +603,10 @@ server <- function(input, output, session) {
       }, numeric(1))
 
       # For sparkline, use oldest -> newest so trend reads left->right
-      values_oldest <- rev(values_newest)
+      values_oldest <- trend_values
+      
+      # For Recent Visits display, blank out if only biopsy window data
+      display_trend_values <- if (only_biopsy_window) rep(NA_real_, length(trend_values)) else trend_values
 
       unit <- ""
       if (nrow(lab_rows) > 0) {
@@ -321,8 +618,8 @@ server <- function(input, output, session) {
       label <- if (!is.na(lab_display[[lab_name]])) lab_display[[lab_name]] else lab_name
       lab_label <- if (nchar(unit) > 0) paste0(label, " (", unit, ")") else label
 
-      vals_ui <- lapply(seq_along(visit_cols), function(i) {
-        val <- values_newest[i]
+      vals_ui <- lapply(seq_along(trend_cols), function(i) {
+        val <- display_trend_values[i]
         fl <- lab_flag(lab_name, val)
 
         val_txt <- if (is.na(val)) {
@@ -338,17 +635,37 @@ server <- function(input, output, session) {
         )
       })
 
-      stroke <- if (lab_name %in% c("C3 complement", "C4 complement", "UPCR")) "#ff6b6b" else "#7fb4ff"
+      # Use new lab-specific trend logic
+      status <- trend_status(lab_name, values_oldest[1], values_oldest[length(values_oldest)], epsilon = 0.05)
+      stroke <- trend_color(status)
+
+      biopsy_val <- find_lab_value(lab_name, biopsy_type)
+      before_val <- if (!is.na(window_before)) find_lab_value(lab_name, window_before) else NA_real_
+      after_val <- if (!is.na(window_after)) find_lab_value(lab_name, window_after) else NA_real_
+
+      render_window_val <- function(val) {
+        if (is.na(val)) return("—")
+        format_lab_value(lab_name, unit, val)
+      }
+
+      render_optional_dup <- function(val, compare_val) {
+        if (is.na(val)) return("—")
+        if (!is.na(compare_val) && isTRUE(all.equal(val, compare_val))) return("↔")
+        format_lab_value(lab_name, unit, val)
+      }
 
       tags$tr(
         tags$td(class = "sle-lab-name", lab_label),
         tags$td(class = "sle-lab-spark", sparkline_svg(values_oldest, stroke = stroke)),
-        lapply(vals_ui, function(x) tags$td(class = "sle-lab-col", x))
+        lapply(vals_ui, function(x) tags$td(class = "sle-lab-col", x)),
+        tags$td(class = "sle-lab-col", render_optional_dup(biopsy_val, display_trend_values[2])),
+        tags$td(class = "sle-lab-col", render_optional_dup(before_val, display_trend_values[1])),
+        tags$td(class = "sle-lab-col", render_optional_dup(after_val, display_trend_values[length(display_trend_values)]))
       )
     })
 
-    header_dates <- lapply(seq_along(visit_cols), function(i) {
-      vc <- visit_cols[[i]]
+    header_dates <- lapply(seq_along(trend_cols), function(i) {
+      vc <- trend_cols[[i]]
       tags$th(
         class = "sle-lab-col",
         tags$div(class = "sle-colhdr", vc$hdr)
@@ -359,9 +676,18 @@ server <- function(input, output, session) {
       class = "sle-table",
       tags$thead(
         tags$tr(
+          tags$th(class = "sle-lab-name", ""),
+          tags$th(class = "sle-lab-spark", ""),
+          tags$th(class = "sle-lab-col", colspan = length(trend_cols), tags$div(class = "sle-colhdr", "RECENT VISITS (LAST 3)")),
+          tags$th(class = "sle-lab-col", colspan = 3, tags$div(class = "sle-colhdr", paste0("BIOPSY WINDOW (", window_label, ")")))
+        ),
+        tags$tr(
           tags$th(class = "sle-lab-name", tags$div(class = "sle-colhdr", "Lab")),
           tags$th(class = "sle-lab-spark", tags$div(class = "sle-colhdr", "Trend")),
-          header_dates
+          header_dates,
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", "At Biopsy")),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", paste0(window_label, " Before"))),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", paste0(window_label, " After")))
         )
       ),
       tags$tbody(row_ui)
@@ -437,10 +763,129 @@ server <- function(input, output, session) {
   })
 
   output$steroid_info <- renderUI({
-    tags$div(
-      class = "sle-kv-list",
-      tags$div(class = "sle-muted", "Steroid data not present in the workbook.")
+    req(input$patient)
+    window_months <- as.integer(input$window_months)
+    
+    # Map biopsy window to timepoint labels - same as lab table
+    if (window_months == 3) {
+      window_before <- "3 Months Before Biopsy"
+      window_after <- "3 Months After Biopsy"
+      window_label <- "3M"
+    } else if (window_months == 6) {
+      window_before <- "Month 0-3"
+      window_after <- "Month 12-15"
+      window_label <- "6M"
+    } else if (window_months == 12) {
+      window_before <- NA_character_
+      window_after <- "Month 15-18"
+      window_label <- "1Y"
+    } else {
+      window_before <- NA_character_
+      window_after <- NA_character_
+      window_label <- "18M"
+    }
+
+    df_biopsy <- get_mock_steroid_exposure(input$patient, "Biopsy")
+    df_before <- if (!is.na(window_before)) get_mock_steroid_exposure(input$patient, window_before) else data.frame()
+    df_after <- if (!is.na(window_after)) get_mock_steroid_exposure(input$patient, window_after) else data.frame()
+
+    if (nrow(df_biopsy) == 0) {
+      return(tags$div(class = "sle-muted", "Steroid data not available for this patient."))
+    }
+
+    na_or_value <- function(x) {
+      if (is.na(x) || nchar(as.character(x)) == 0) return("N/A (not provided yet)")
+      as.character(x)
+    }
+
+    cell_val <- function(df, field) {
+      if (nrow(df) == 0) return("—")
+      val <- df[[field]][1]
+      if (is.na(val) || nchar(as.character(val)) == 0) return("N/A (not provided yet)")
+      as.character(val)
+    }
+
+    rows <- list(
+      list(label = "Alert: >5mg Pred >8 weeks", field = "alert_5mg_8w"),
+      list(label = "Alert: >6mg Pred >4 weeks + no decrease", field = "alert_6mg_4w_no_decrease"),
+      list(label = "Total mg prednisone equivalents", field = "total_mg_pred_equiv"),
+      list(label = "Avg mg/day", field = "avg_mg_pred_per_day"),
+      list(label = "1y cumulative", field = "cumulative_1y_mg"),
+      list(label = "5y cumulative", field = "cumulative_5y_mg"),
+      list(label = "Last IV steroid note", field = "last_iv_steroid_note"),
+      list(label = "SLICC damage note", field = "slicc_damage_note")
     )
+
+    tags$table(
+      class = "sle-table",
+      tags$thead(
+        tags$tr(
+          tags$th(class = "sle-lab-name", ""),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", "At Biopsy")),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", paste0(window_label, " Before"))),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", paste0(window_label, " After")))
+        )
+      ),
+      tags$tbody(
+        lapply(rows, function(r) {
+          tags$tr(
+            tags$td(class = "sle-lab-name", r$label),
+            tags$td(class = "sle-lab-col", cell_val(df_biopsy, r$field)),
+            tags$td(class = "sle-lab-col", cell_val(df_before, r$field)),
+            tags$td(class = "sle-lab-col", cell_val(df_after, r$field))
+          )
+        })
+      )
+    )
+  })
+
+  output$biomeds_tracker <- renderUI({
+    req(input$patient)
+    df <- get_mock_biomeds(input$patient)
+    if (nrow(df) == 0) {
+      return(tags$div(class = "sle-muted", "Not provided in workbook yet."))
+    }
+    tags$table(
+      class = "sle-table",
+      tags$thead(
+        tags$tr(
+          tags$th(class = "sle-lab-name", tags$div(class = "sle-colhdr", "Medication")),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", "Class")),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", "Start")),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", "Stop")),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", "Status")),
+          tags$th(class = "sle-lab-col", tags$div(class = "sle-colhdr", "Notes"))
+        )
+      ),
+      tags$tbody(
+        lapply(seq_len(nrow(df)), function(i) {
+          tags$tr(
+            tags$td(class = "sle-lab-name", df$med_name[i]),
+            tags$td(class = "sle-lab-col", df$class[i]),
+            tags$td(class = "sle-lab-col", format_date_short(df$start_date[i])),
+            tags$td(class = "sle-lab-col", format_date_short(df$stop_date[i])),
+            tags$td(class = "sle-lab-col", df$status[i]),
+            tags$td(class = "sle-lab-col", df$notes[i])
+          )
+        })
+      )
+    )
+  })
+
+  output$notes_text <- renderUI({
+    req(input$patient)
+    has_steroids <- nrow(get_mock_steroid_exposure(input$patient)) > 0
+    if (has_steroids) {
+      tags$div(
+        class = "sle-muted",
+        "Medication and provider details are not present in the current mock workbook. Steroid exposure fields are included; 1y/5y cumulative dose fields are not provided yet in mock data."
+      )
+    } else {
+      tags$div(
+        class = "sle-muted",
+        "Medication and provider details are not present in the current mock workbook. Steroid exposure details are not present for this patient."
+      )
+    }
   })
 
   # Biopsy Summary Tab outputs

@@ -63,10 +63,31 @@ ui <- fluidPage(
             ),
             tags$div(
               class = "sle-card",
-              tags$div(class = "sle-card__title", "Key Labs & Trends (Last 3 Visits)"),
               tags$div(
-                class = "sle-card--scrollable",
-                style = "max-height: 300px; overflow-y: scroll;",
+                class = "sle-card__title sle-card__title--row",
+                tags$span("Key Labs & Trends"),
+                selectInput(
+                  "window_months",
+                  NULL,
+                  choices = c("3 months" = "3", "6 months" = "6", "1 year" = "12", "18 months" = "18"),
+                  selected = "3",
+                  width = "160px"
+                )
+              ),
+              tags$div(
+                class = "sle-legend",
+                style = "font-size: 12px; color: rgba(255,255,255,0.7); margin: 8px 0 12px 0; padding: 0 16px;",
+                tags$span("Trend colors: "),
+                tags$span(style = "color: #4a9eff; font-weight: 600;", "Blue"),
+                tags$span(" = improving, "),
+                tags$span(style = "color: #ff6b6b; font-weight: 600;", "Red"),
+                tags$span(" = worsening, "),
+                tags$span(style = "color: #8a8f99; font-weight: 600;", "Grey"),
+                tags$span(" = stable/unknown")
+              ),
+              tags$div(
+                class = "sle-card--scrollable sle-sticky-table",
+                style = "max-height: 300px; overflow-y: auto;",
                 uiOutput("key_labs_table")
               ),
               tags$div(
@@ -79,19 +100,31 @@ ui <- fluidPage(
               )
             ),
             tags$div(
+              class = "sle-card",
+              tags$div(class = "sle-card__title", "Current SLE Medications"),
+              uiOutput("meds_current_sle")
+            ),
+            tags$div(
+              class = "sle-card",
+              tags$div(class = "sle-card__title", "Biologics / Immunosuppressives (Biomeds Tracker)"),
+              uiOutput("biomeds_tracker")
+            ),
+            tags$div(
               class = "sle-grid sle-grid--2",
-              tags$div(
-                class = "sle-card",
-                tags$div(class = "sle-card__title", "Steroid Info"),
+              tags$details(
+                class = "sle-card sle-card--collapsible",
+                open = NA,
+                tags$summary(
+                  class = "sle-card__title",
+                  style = "cursor: pointer; user-select: none;",
+                  "Steroid Info"
+                ),
                 uiOutput("steroid_info")
               ),
               tags$div(
                 class = "sle-card sle-card--muted",
                 tags$div(class = "sle-card__title", "Notes"),
-                tags$div(
-                  class = "sle-muted",
-                  "Medication, steroid, and provider details are not present in the workbook."
-                )
+                uiOutput("notes_text")
               )
             )
           ),
@@ -153,12 +186,7 @@ ui <- fluidPage(
           tabPanel(
             "Medications",
             tags$div(
-              class = "sle-grid sle-grid--3",
-              tags$div(
-                class = "sle-card",
-                tags$div(class = "sle-card__title", "Current SLE Medications"),
-                uiOutput("meds_current_sle")
-              ),
+              class = "sle-grid sle-grid--2",
               tags$div(
                 class = "sle-card",
                 tags$div(class = "sle-card__title", "Current BP Medications"),
