@@ -242,12 +242,12 @@ build_labs <- function() {
         "ESR" = list(value = 16, unit = "mm/hr"),
         "CRP" = list(value = 0.5, unit = "mg/dl"),
         "C3 complement" = list(value = 84.7, unit = "mg/dL"),
-        "C4 complement" = list(value = 11.7, unit = "mg/dL"),
-        "Urine Protein" = list(value = 165, unit = "mg/dL"),
-        "Urine Creatinine" = list(value = 50, unit = "mg/dL"),
-        "UPCR" = list(value = 3.24, unit = NA),
-        "Albumin" = list(value = 4.5, unit = NA),
-        "eGFR" = list(value = 113, unit = NA)
+        "C4 complement" = list(value = 28.6, unit = "mg/dL"),
+        "Urine Protein" = list(value = 29, unit = "mg/dL"),
+        "Urine Creatinine" = list(value = 43, unit = "mg/dL"),
+        "UPCR" = list(value = 0.67, unit = NA),
+        "Albumin" = list(value = 4.6, unit = NA),
+        "eGFR" = list(value = 140, unit = NA)
       ),
       "3 Months Before Biopsy" = list(
         "Platelets" = list(value = 288000, unit = "K/µL"),
@@ -259,12 +259,12 @@ build_labs <- function() {
         "ESR" = list(value = 26, unit = "mm/hr"),
         "CRP" = list(value = 0.5, unit = "mg/dl"),
         "C3 complement" = list(value = 70.8, unit = "mg/dL"),
-        "C4 complement" = list(value = 11.9, unit = "mg/dL"),
-        "Urine Protein" = list(value = 110, unit = "mg/dL"),
-        "Urine Creatinine" = list(value = 52.3, unit = "mg/dL"),
+        "C4 complement" = list(value = 12.4, unit = "mg/dL"),
+        "Urine Protein" = list(value = 102, unit = "mg/dL"),
+        "Urine Creatinine" = list(value = 49, unit = "mg/dL"),
         "UPCR" = list(value = 2.10, unit = NA),
-        "Albumin" = list(value = 4.4, unit = NA),
-        "eGFR" = list(value = 123, unit = NA)
+        "Albumin" = list(value = 3.3, unit = NA),
+        "eGFR" = list(value = 80, unit = NA)
       ),
       "Biopsy" = list(
         "Platelets" = list(value = 200000, unit = "K/µL"),
@@ -280,8 +280,8 @@ build_labs <- function() {
         "Urine Protein" = list(value = 110, unit = "mg/dL"),
         "Urine Creatinine" = list(value = 50, unit = "mg/dL"),
         "UPCR" = list(value = 2.20, unit = NA),
-        "Albumin" = list(value = 4.2, unit = NA),
-        "eGFR" = list(value = 115, unit = NA)
+        "Albumin" = list(value = 3.1, unit = NA),
+        "eGFR" = list(value = 74, unit = NA)
       ),
       "3 Months After Biopsy" = list(
         "Platelets" = list(value = 288000, unit = "K/µL"),
@@ -294,11 +294,11 @@ build_labs <- function() {
         "CRP" = list(value = 0.5, unit = "mg/dl"),
         "C3 complement" = list(value = 84.3, unit = "mg/dL"),
         "C4 complement" = list(value = 18.3, unit = "mg/dL"),
-        "Urine Protein" = list(value = 110, unit = "mg/dL"),
-        "Urine Creatinine" = list(value = 174.3, unit = "mg/dL"),
+        "Urine Protein" = list(value = 30, unit = "mg/dL"),
+        "Urine Creatinine" = list(value = 48, unit = "mg/dL"),
         "UPCR" = list(value = 0.63, unit = NA),
-        "Albumin" = list(value = 4.5, unit = NA),
-        "eGFR" = list(value = 115, unit = NA)
+        "Albumin" = list(value = 4.8, unit = NA),
+        "eGFR" = list(value = 132, unit = NA)
       ),
       "Month 12-15" = list(
         "Platelets" = list(value = 300000, unit = "K/µL"),
@@ -311,10 +311,10 @@ build_labs <- function() {
         "CRP" = list(value = 0.5, unit = "mg/dl"),
         "C3 complement" = list(value = 88.9, unit = "mg/dL"),
         "C4 complement" = list(value = 24.7, unit = "mg/dL"),
-        "Urine Protein" = list(value = 98, unit = "mg/dL"),
-        "Urine Creatinine" = list(value = 172.2, unit = "mg/dL"),
+        "Urine Protein" = list(value = 24, unit = "mg/dL"),
+        "Urine Creatinine" = list(value = 40, unit = "mg/dL"),
         "UPCR" = list(value = 0.57, unit = NA),
-        "Albumin" = list(value = 4.3, unit = NA),
+        "Albumin" = list(value = 4.9, unit = NA),
         "eGFR" = list(value = 143, unit = NA)
       ),
       "Month 15-18" = list(
@@ -328,10 +328,10 @@ build_labs <- function() {
         "CRP" = list(value = 0.5, unit = "mg/dl"),
         "C3 complement" = list(value = 86.7, unit = "mg/dL"),
         "C4 complement" = list(value = 28.6, unit = "mg/dL"),
-        "Urine Protein" = list(value = 170, unit = "mg/dL"),
-        "Urine Creatinine" = list(value = 343.1, unit = "mg/dL"),
+        "Urine Protein" = list(value = 21, unit = "mg/dL"),
+        "Urine Creatinine" = list(value = 43, unit = "mg/dL"),
         "UPCR" = list(value = 0.49, unit = NA),
-        "Albumin" = list(value = 4.4, unit = NA),
+        "Albumin" = list(value = 5.0, unit = NA),
         "eGFR" = list(value = 140, unit = NA)
       )
     )
