@@ -544,61 +544,67 @@ MOCK_STEROID_EXPOSURE <- data.frame(
     "PT1","PT1","PT1",
     "PT2","PT2","PT2",
     "PT3","PT3","PT3",
-    "PT4","PT4","PT4"  # PT4: steroid data not provided in workbook
+    # PT4: 6 timepoints matching visit structure
+    "PT4","PT4","PT4","PT4","PT4","PT4"
   ),
   timepoint = c(
     "3 Months Before Biopsy","Biopsy","3 Months After Biopsy",
     "3 Months Before Biopsy","Biopsy","3 Months After Biopsy",
     "3 Months Before Biopsy","Biopsy","3 Months After Biopsy",
-    "3 Months Before Biopsy","Biopsy","3 Months After Biopsy"
+    # PT4: Month 0-3 → Month 3-6 (=3M Before) → Month 6-9 (=Biopsy) → Month 9-12 (=3M After) → Month 12-15 → Month 15-18
+    "Month 0-3","3 Months Before Biopsy","Biopsy","3 Months After Biopsy","Month 12-15","Month 15-18"
   ),
   alert_5mg_8w = c(
     "Y","Y","N",
     "Y","Y","Y",
     "N","Y","N",
-    NA, NA, NA  # PT4: not provided
+    # PT4: Month 0-3=N, Month 3-6=Y, Month 6-9=Y, Month 9-12=Y, Month 12-15=Y, Month 15-18=Y
+    "N","Y","Y","Y","Y","Y"
   ),
   alert_6mg_4w_no_decrease = c(
     "Y","N","N",
     "Y","Y","Y",
     "N","N","N",
-    NA, NA, NA  # PT4: not provided
+    # PT4: Month 0-3=N, Month 3-6=Y, Month 6-9=Y, Month 9-12=Y, Month 12-15=Y, Month 15-18=N
+    "N","Y","Y","Y","Y","N"
   ),
   total_mg_pred_equiv = c(
     450, 900, 0,
     600, 750, 600,
     0, 900, 0,
-    NA, NA, NA  # PT4: not provided
+    # PT4: Month 0-3=0, Month 3-6=300, Month 6-9=600, Month 9-12=300, Month 12-15=150, Month 15-18=NA
+    0, 300, 600, 300, 150, NA
   ),
   avg_mg_pred_per_day = c(
     5, 10, 0,
     20, 25, 20,
     0, 10, 0,
-    NA, NA, NA  # PT4: not provided
+    # PT4: Month 0-3=0, Month 3-6=10, Month 6-9=20, Month 9-12=10, Month 12-15=5, Month 15-18=NA
+    0, 10, 20, 10, 5, NA
   ),
   cumulative_1y_mg = c(
     NA, NA, NA,
     NA, NA, NA,
     NA, NA, NA,
-    NA, NA, NA  # PT4: not provided
+    NA, NA, NA, NA, NA, NA
   ),
   cumulative_5y_mg = c(
     NA, NA, NA,
     NA, NA, NA,
     NA, NA, NA,
-    NA, NA, NA  # PT4: not provided
+    NA, NA, NA, NA, NA, NA
   ),
   last_iv_steroid_note = c(
     NA, "3 days post Bx", "3 days post Bx",
     "3 days prior to 3 month visit", "3 days post Bx", NA,
     NA, NA, NA,
-    NA, NA, NA  # PT4: not provided
+    NA, NA, NA, NA, NA, NA
   ),
   slicc_damage_note = c(
     "Y-osteoporotic fractures", NA, NA,
     "Y-DM and osteoporotic fractures", NA, NA,
     NA, NA, NA,
-    NA, NA, NA  # PT4: not provided
+    NA, NA, NA, NA, NA, NA
   ),
   stringsAsFactors = FALSE
 )
